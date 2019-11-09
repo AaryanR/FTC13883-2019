@@ -1,151 +1,116 @@
+/* Copyright (c) 2017 FIRST. All rights reserved.
+ *
+ * Redistribution and use in source and binary forms, with or without modification,
+ * are permitted (subject to the limitations in the disclaimer below) provided that
+ * the following conditions are met:
+ *
+ * Redistributions of source code must retain the above copyright notice, this list
+ * of conditions and the following disclaimer.
+ *
+ * Redistributions in binary form must reproduce the above copyright notice, this
+ * list of conditions and the following disclaimer in the documentation and/or
+ * other materials provided with the distribution.
+ *
+ * Neither the name of FIRST nor the names of its contributors may be used to endorse or
+ * promote products derived from this software without specific prior written permission.
+ *
+ * NO EXPRESS OR IMPLIED LICENSES TO ANY PARTY'S PATENT RIGHTS ARE GRANTED BY THIS
+ * LICENSE. THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+ * "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO,
+ * THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+ * ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE LIABLE
+ * FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+ * DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
+ * SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
+ * CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
+ * OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ */
+
 package org.firstinspires.ftc.teamcode;
 
-import com.qualcomm.robotcore.eventloop.opmode.Autonomous;
-import com.qualcomm.robotcore.eventloop.opmode.Disabled;
-import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
+import android.net.rtp.RtpStream;
+
 import com.qualcomm.robotcore.hardware.DcMotor;
+import com.qualcomm.robotcore.hardware.DcMotorSimple;
+import com.qualcomm.robotcore.hardware.HardwareMap;
+import com.qualcomm.robotcore.hardware.Servo;
 import com.qualcomm.robotcore.util.ElapsedTime;
 
-import org.firstinspires.ftc.robotcontroller.external.samples.HardwarePushbot;
+/**
+ * This is NOT an opmode.
+ *
+ * This class can be used to define all the specific hardware for a single robot.
+ * In this case that robot is a Pushbot.
+ * See PushbotTeleopTank_Iterative and others classes starting with "Pushbot" for usage examples.
+ *
+ * This hardware class assumes the following device names have been configured on the robot:
+ * Note:  All names are lower case and some have single spaces between words.
+ *
+ * Motor channel:  Left  drive motor:        "left_drive"
+ * Motor channel:  Right drive motor:        "right_drive"
+ * Motor channel:  Manipulator drive motor:  "left_arm"
+ * Servo channel:  Servo to open left claw:  "left_hand"
+ * Servo channel:  Servo to open right claw: "right_hand"
+ */
+public class AaryanHardwarePushbot
+{
+    /* Public OpMode members. */
+    public DcMotor  frontLeft   = null;
+    public DcMotor  frontRight  = null;
+    public DcMotor  backLeft    = null;
+    public DcMotor  backRight   = null;
+    public DcMotor  middle      = null;
 
-@Autonomous(name="Pushbot: AaryanAutoDrive", group="Pushbot")
-//@Disabled
-public class AaryanAutoDrive extends LinearOpMode {
+        public static final double MID_SERVO       =  0.5 ;
+    public static final double ARM_UP_POWER    =  0.45 ;
+    public static final double ARM_DOWN_POWER  = -0.45 ;
 
-    /* Declare OpMode members. */
-    AaryanHardwarePushbot robot   = new AaryanHardwarePushbot();   // Use a Pushbot's hardware
-    private ElapsedTime runtime = new ElapsedTime();
 
-    static final double     COUNTS_PER_MOTOR_REV    = 1440 ;    // eg: TETRIX Motor Encoder
-    static final double     DRIVE_GEAR_REDUCTION    = 2.0 ;     // This is < 1.0 if geared UP
-    static final double     WHEEL_DIAMETER_INCHES   = 3.5 ;     // For figuring circumference
-    static final double     COUNTS_PER_INCH         = (COUNTS_PER_MOTOR_REV * DRIVE_GEAR_REDUCTION) /
-            (WHEEL_DIAMETER_INCHES * 3.1415);
-    static final double     DRIVE_SPEED             = 2;
-    static final double     TURN_SPEED              = 1;
+    /* local OpMode members. */
+    HardwareMap hwMap           =  null;
+    private ElapsedTime period  = new ElapsedTime();
 
-    @Override
-    public void runOpMode() {
+    /* Constructor */
+    public AaryanHardwarePushbot(){
 
-        /*
-         * Initialize the drive system variables.
-         * The init() method of the hardware class does all the work here
-         */
-        robot.init(hardwareMap);
-
-        // Send telemetry message to signify robot waiting;
-        telemetry.addData("Status", "Resetting Encoders");    //
-        telemetry.update();
-
-        //We do this for every motor to reset encoder
-        robot.frontLeft.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
-        robot.frontRight.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
-        robot.backLeft.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
-        robot.backRight.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
-        //We then run it
-        robot.frontLeft.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
-        robot.frontRight.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
-        robot.backLeft.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
-        robot.backRight.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
-
-        // Send telemetry message to indicate successful Encoder reset
-        telemetry.addData("Path0",  "Starting at %7d :%7d",
-                robot.frontLeft.getCurrentPosition(),
-                robot.frontRight.getCurrentPosition(),
-                robot.backLeft.getCurrentPosition(),
-                robot.backRight.getCurrentPosition());
-        telemetry.update();
-
-        // Wait for the game to start (driver presses PLAY)
-        waitForStart();
-
-        // Step through each leg of the path,
-        // Note: Reverse movement is obtained by setting a negative distance (not speed)
-        encoderDrive(DRIVE_SPEED,  48,  48, 5.0);  // S1: Forward 47 Inches with 5 Sec timeout
-        encoderDrive(TURN_SPEED,   12, -12, 4.0);  // S2: Turn Right 12 Inches with 4 Sec timeout
-        encoderDrive(DRIVE_SPEED, -24, -24, 4.0);  // S3: Reverse 24 Inches with 4 Sec timeout
-
-        // robot.leftClaw.setPosition(1.0);            // S4: Stop and close the claw.
-        //robot.rightClaw.setPosition(0.0);
-        //sleep(1000);     // pause for servos to move
-
-        telemetry.addData("Path", "Complete");
-        telemetry.update();
     }
 
-    /*
-     *  Method to perfmorm a relative move, based on encoder counts.
-     *  Encoders are not reset as the move is based on the current position.
-     *  Move will stop if any of three conditions occur:
-     *  1) Move gets to the desired position
-     *  2) Move runs out of time
-     *  3) Driver stops the opmode running.
-     */
-    public void encoderDrive(double speed,
-                             double leftInches, double rightInches,
-                             double timeoutS) {
-        int newLeftTarget;
-        int newRightTarget;
+    /* Initialize standard Hardware interfaces */
+    public void init(HardwareMap ahwMap) {
+        // Save reference to Hardware map
+        hwMap = ahwMap;
 
-        // Ensure that the opmode is still active
-        if (opModeIsActive()) {
+        // Define and Initialize Motors
+        DcMotor frontLeft = hwMap.get(DcMotor.class, "frontLeft");
+        DcMotor frontRight = hwMap.get(DcMotor.class, "frontRight");
+        DcMotor backLeft = hwMap.get(DcMotor.class, "backLeft");
+        DcMotor backRight = hwMap.get(DcMotor.class, "backRight");
+        DcMotor middle = hwMap.get(DcMotor.class, "middle");
 
-            // Determine new target position, and pass to motor controller
-            newLeftTarget = robot.frontLeft.getCurrentPosition() + (int)(leftInches * COUNTS_PER_INCH);
-            newRightTarget = robot.frontRight.getCurrentPosition() + (int)(rightInches * COUNTS_PER_INCH);
-            newLeftTarget = robot.backLeft.getCurrentPosition() + (int)(rightInches * COUNTS_PER_INCH);
-            newRightTarget = robot.backRight.getCurrentPosition() + (int)(rightInches * COUNTS_PER_INCH);
-            robot.frontLeft.setTargetPosition(newLeftTarget);
-            robot.frontRight.setTargetPosition(newRightTarget);
-            robot.backLeft.setTargetPosition(newLeftTarget);
-            robot.backRight.setTargetPosition(newRightTarget);
 
-            // Turn On RUN_TO_POSITION
-            robot.frontLeft.setMode(DcMotor.RunMode.RUN_TO_POSITION);
-            robot.frontRight.setMode(DcMotor.RunMode.RUN_TO_POSITION);
-            robot.backLeft.setMode(DcMotor.RunMode.RUN_TO_POSITION);
-            robot.backRight.setMode(DcMotor.RunMode.RUN_TO_POSITION);
 
-            // reset the timeout time and start motion.
-            runtime.reset();
-            robot.frontLeft.setPower(Math.abs(speed));
-            robot.frontRight.setPower(Math.abs(speed));
-            robot.backLeft.setPower(Math.abs(speed));
-            robot.backRight.setPower(Math.abs(speed));
+        frontLeft.setDirection(DcMotor.Direction.FORWARD); // Set to REVERSE if using AndyMark motors
+        frontRight.setDirection(DcMotor.Direction.REVERSE);// Set to FORWARD if using AndyMark motors
+        backLeft.setDirection(DcMotor.Direction.FORWARD);// Set to FORWARD if using AndyMark motors
+        backRight.setDirection(DcMotor.Direction.REVERSE);// Set to FORWARD if using AndyMark motors
 
-            // keep looping while we are still active, and there is time left, and both motors are running.
-            // Note: We use (isBusy() && isBusy()) in the loop test, which means that when EITHER motor hits
-            // its target position, the motion will stop.  This is "safer" in the event that the robot will
-            // always end the motion as soon as possible.
-            // However, if you require that BOTH motors have finished their moves before the robot continues
-            // onto the next step, use (isBusy() || isBusy()) in the loop test.
-            while (opModeIsActive() &&
-                    (runtime.seconds() < timeoutS) &&
-                    (robot.frontRight.isBusy() && robot.frontLeft.isBusy() && robot.backLeft.isBusy() && robot.backRight.isBusy())) {
 
-                // Display it for the driver.
-                telemetry.addData("Path1",  "Running to %7d :%7d", newLeftTarget,  newRightTarget);
-                telemetry.addData("Path2", "Running at %7d :%7d",
-                        robot.frontLeft.getCurrentPosition(),
-                        robot.frontRight.getCurrentPosition(),
-                        robot.backLeft.getCurrentPosition(),
-                        robot.backRight.getCurrentPosition());
-                telemetry.update();
-            }
+        // Set all motors to zero power
+        frontLeft.setPower(0);
+        frontRight.setPower(0);
+        backLeft.setPower(0);
+        backRight.setPower(0);
 
-            // Stop all motion;
-            robot.frontLeft.setPower(0);
-            robot.frontRight.setPower(0);
-            robot.backRight.setPower(0);
-            robot.backLeft.setPower(0);
+        // Set all motors to run without encoders.
+        // May want to use RUN_USING_ENCODERS if encoders are installed.
+        frontLeft.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
+        frontRight.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
+        backLeft.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
+        backRight.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
 
-            // Turn off RUN_TO_POSITION
-            robot.frontLeft.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
-            robot.frontRight.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
-            robot.backLeft.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
-            robot.backRight.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
-
-            //  sleep(250);   // optional pause after each move
-        }
+        // Define and initialize ALL installed servos.
+        // No servos right now
     }
-}
+ }
+
